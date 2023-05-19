@@ -2,19 +2,25 @@ from flight_data import FlightData
 from flight_search import FlightSearch
 from notification_manager import NotificationManager
 import data_manager as dm
+from os import environ as env
+from dotenv import load_dotenv
+load_dotenv('/home/dan/pythonProject/envvar.env')
 # Classes
 nm = NotificationManager()
 fd = FlightData()
 fs = FlightSearch()
 # Variables
-departing = 'London'
+departing = 'Sydney'
 destinations = []
 currency = 'GBP'
 deals = {}
+contact_list = []
+
 
 # Checking if the spreadsheet cities have IATA codes, retrieving if not
 fd.iata_code_check()
 # Collating IATA codes from spreadsheet into a list
+
 for _ in dm.get_sheet_data():
     destinations.append(_[1])
 # Converting spreadsheet data to dict for flight search comparison
@@ -30,4 +36,4 @@ for _ in flights:
         deals[_] = flights[_]
 # sending SMS notifications with details of the flights in the deals list.
 for _ in deals:
-    nm.send_notification(deals[_], price_dict[_], departing_code)
+    nm.send_notifications(deals[_], price_dict[_], departing_code, dm.get_contact_data())

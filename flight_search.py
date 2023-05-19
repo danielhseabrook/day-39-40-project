@@ -39,17 +39,19 @@ class FlightSearch:
             city_code = request.json()['locations'][0]['code']
             return city_code
 
-    def check_flights(self, departing, destination, currency):
+    def check_flights(self, departing, destination, currency, stop_overs=0):
         data = []
         flights = {}
+        stop_over_check = []
         for _ in destination:
+
             parameters = {
                 'fly_from': departing,
                 'fly_to': _,
                 'date_from': self.start_search_date,
                 'date_to': self.end_search_date,
                 'curr': currency,
-                'max_stopovers': 0,
+                'max_stopovers': stop_overs,
                 'ret_to_diff_airport': 0,
                 'return_to_diff_city': False,
                 'one_for_city': 1,
@@ -60,8 +62,35 @@ class FlightSearch:
             response = requests.get(url='https://api.tequila.kiwi.com/v2/search', headers=self.header, params=parameters)
             print(response.status_code)
             response = response.json()
-            if len(response['data']) > 0:
+            try:
+                x = response['data'][0]
                 data.append(response['data'])
+            except IndexError:
+                stop_over_check.append(_)
+# CHECKING EMPTY RESULTS FOR FLIGHTS WITH STOPS
+        for _ in stop_over_check:
+            parameters = {
+                'fly_from': departing,
+                'fly_to': _,
+                'date_from': self.start_search_date,
+                'date_to': self.end_search_date,
+                'curr': currency,
+                'max_stopovers': 2,
+                'ret_to_diff_airport': 0,
+                'return_to_diff_city': False,
+                'one_for_city': 1,
+                'nights_in_dst_from': 7,
+                'nights_in_dst_to': 28,
+            }
+
+            response = requests.get(url='https://api.tequila.kiwi.com/v2/search', headers=self.header, params=parameters)
+            print(response.status_code)
+            response = response.json()
+            try:
+                x = response['data'][0]
+                data.append(response['data'])
+            except IndexError:
+                print(f"No flights for {_}")
 
         for _ in data:
             flight = {
@@ -71,6 +100,8 @@ class FlightSearch:
                   'local_departure': _[0]['local_departure'],
                   'price': _[0]['price']
                   }
+            if len(_[0]['route']) > 2:
+                flight['via_city'] = _[0]['route'][0]['cityTo']
             flights[_[0]['cityTo']] = flight
 
         return flights
